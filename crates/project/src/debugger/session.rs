@@ -2646,9 +2646,17 @@ impl Session {
         self.fetch(
             command,
             move |this, variables, cx| {
-                let Some(variables) = variables.log_err() else {
+                let Some(mut variables) = variables.log_err() else {
                     return;
                 };
+
+                if this.adapter.0.as_ref() == "Debugpy" {
+                    for variable in variables.iter_mut() {
+                        if variable.type_ == Some("str".into()) {
+                            variable.value = variable.value.replace("\\n", "\n");
+                        }
+                    }
+                }
 
                 this.active_snapshot
                     .variables
