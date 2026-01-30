@@ -2653,7 +2653,29 @@ impl Session {
                 if this.adapter.0.as_ref() == "Debugpy" {
                     for variable in variables.iter_mut() {
                         if variable.type_ == Some("str".into()) {
-                            variable.value = variable.value.replace("\\n", "\n");
+                            // reverse Python repr() escaping
+                            let mut unescaped = String::with_capacity(variable.value.len());
+                            let mut chars = variable.value.chars();
+                            while let Some(c) = chars.next() {
+                                if c != '\\' {
+                                    unescaped.push(c);
+                                } else {
+                                    match chars.next() {
+                                        Some('\\') => unescaped.push('\\'),
+                                        Some('n') => unescaped.push('\n'),
+                                        Some('t') => unescaped.push('\t'),
+                                        Some('r') => unescaped.push('\r'),
+                                        Some('\'') => unescaped.push('\''),
+                                        Some('"') => unescaped.push('"'),
+                                        Some(c) => {
+                                            unescaped.push('\\');
+                                            unescaped.push(c);
+                                        }
+                                        None => {}
+                                    }
+                                }
+                            }
+                            variable.value = unescaped;
                         }
                     }
                 }
